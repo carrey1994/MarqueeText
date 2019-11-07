@@ -1,5 +1,6 @@
 package com.example.custommarquee
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Scroller
@@ -11,8 +12,14 @@ class MainActivity : AppCompatActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(R.layout.activity_main)
-//        marquee.startScroll()
-		marqueeFrame.setData(listOf("あいうえお　さしすせそ　かきくけこ　たちつてと　なにぬねのなにぬ", "abcdefghijklmnopqrstuvwxyz !!!", "安安安安安安安安安安安@@", "あいうえお　さしすせそ　かきくけこ　たちつてと　なにぬねのなにぬ"))
+		marqueeFrame.setData(
+			listOf(
+				"abcdefghijklmnopqrstuvwxyz !!!",
+				"あいうえおさしすせそかきくけこたちつてとなにぬねのなにぬ",//
+				"安安安安安安安安安安安@@",
+				"あいうえおさしすせそかきくけこたちつてとなにぬねのなにぬ"
+			))
+//		startActivity(Intent(this, AnotherActivity::class.java))
 //		marqueeFrame.invalidate()
 		
 		

@@ -4,14 +4,10 @@ import android.content.Context
 import android.os.Handler
 import android.util.AttributeSet
 import android.util.Log
-import android.view.animation.LinearInterpolator
 import android.widget.*
 import android.animation.ObjectAnimator
 import android.graphics.Canvas
-import android.graphics.Color
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 import androidx.core.animation.doOnEnd
-import java.util.*
 
 
 class MarqueeFrame : HorizontalScrollView {
@@ -19,226 +15,145 @@ class MarqueeFrame : HorizontalScrollView {
 	constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 	constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 	
-	var mWidth = 0
-	
-	val emptyGap = 400
-	
-	
-	val rnd = Random()
-	//	val textViews = mTexts.map {
-//		TextView(context).apply {
-//			text = it
-////			setBackgroundColor(Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)))
-//		}
-//	}
+	private var mWidth = 0
+	private val emptyGap = 600
+	private var isDataDone = false
+	private var isFirst = false
+	private var mDuration = 2500L
+	private val marqueeLayout = LinearLayout(context)
+	private var isStart = false
+	private var isViewParamFinish = false
 	private lateinit var textViews: List<TextView>
-	
-	val marqueeLayout = LinearLayout(context)
-	
-	
-	var isStart = false
-	var isViewParamFinish = false
+	private var originalWidths = listOf<Int>()
+	private val distanceList = arrayListOf<Int>()
 	
 	init {
 		isVerticalScrollBarEnabled = false
 		isHorizontalScrollBarEnabled = false
 		isFocusable = false
+		
 	}
 	
 	fun setData(texts: List<String>) {
-		textViews = texts.map {
-			TextView(context).apply {
-				text = it
-			}
+		val copyList = arrayListOf<TextView>().apply {
+			addAll(texts.map {
+				TextView(context).apply {
+					text = it
+				}
+			})
+			add(TextView(context).apply {
+				text = texts[0]
+			})
 		}
+		textViews = copyList
 		textViews.forEach { marqueeLayout.addView(it) }
 		addView(marqueeLayout)
-		isRun = true
+		isDataDone = true
 	}
 	
 	
-	var isRun = false
-	
-	var delaytime = 1500L
-	var mDuration = 3000L
-	
 	override fun onDraw(canvas: Canvas?) {
 		super.onDraw(canvas)
-		if (isRun.not()) return
-		
+		if (isDataDone.not()) return
 		mWidth = width
-		Log.e("mWidth===", "$mWidth")
-		Log.e("HorizontalWidth=>>>>>", "${width}===")
 		
 		if (isViewParamFinish.not()) {
+			originalWidths = textViews.map { it.width }
 			textViews.forEach {
 				if (it.width > mWidth)
 					it.run { minWidth = this.paint.measureText(this.text.toString()).toInt() + emptyGap }
 				else
 					it.run { minWidth = mWidth }
-				Log.e("TextViewWidthMin===>", "${it.width}")
+				distanceList.add(it.minWidth)
 			}
-			
-			
 			isViewParamFinish = true
 		}
-		Log.e("First===", "${textViews[0].width}")
-		Log.e("Second===", "${textViews[1].width}")
-		//Solution2  but always from start
+		
 		if (isStart.not()) {
-//			for (i in textViews.indices) {
-//				var distance = 0
-//				for (k in 0..i) {
-//					distance += textViews[k].width
-//				}
-//				if (textViews[i].width > mWidth) {//Too long
-//					Handler().postDelayed({
-//						ObjectAnimator.ofInt(this, "scrollX", distance - mWidth - emptyGap).apply {
-//							duration = mDuration
-//
-//							if (i == textViews.lastIndex)
-//								doOnEnd {
-//									scrollTo(0, 0)
-//									isStart = false
-//								}
-//							if (i == 0) {
+			isStart = true
+			for (i in textViews.indices) {
+				var mDistance = 0
+				for (k in 0 until i) {
+					mDistance += distanceList[k]
+				}
+				
+				when (i) {
+					0 -> {
+						if (originalWidths[0] > mWidth)
+							animNoDelay(originalWidths[0] - mWidth, 0) {
+								isStart = true
+								isFirst = true
+							}
+//						else
+//							animNoDelay(mWidth, 0) {
 //								isStart = true
+//								isFirst = true
 //							}
-//						}.start()
-//					}, getOddDuration(i + 1))
-//				} else {
-//					Handler().postDelayed({
-//						ObjectAnimator.ofInt(this, "scrollX", distance).apply {
-//							duration = mDuration
-//
-//							if (i == textViews.lastIndex)
-//								doOnEnd {
-//									scrollTo(0, 0)
-//									isStart = false
-//								}
-//							if (i == 0) {
-//								isStart = true
-//							}
-//						}.start()
-//					}, getOddDuration(i + 1))
-//				}
-//			}
-			
-			Handler().postDelayed({
-				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width - mWidth - emptyGap).apply {
-					duration = mDuration
-				}.start()
-				isStart = true
-			}, getOddDuration(0))
-			
-			Handler().postDelayed({
-				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width).apply {
-					duration = mDuration
-				}.start()
-				isStart = true
-			}, getOddDuration(1))
-//
-			Handler().postDelayed({
-				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width + textViews[1].width).apply {
-					duration = mDuration
-				}.start()
-			}, getOddDuration(2))
-//
-			Handler().postDelayed({
-				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width + textViews[1].width + textViews[2].width + textViews[3].width - mWidth - emptyGap).apply {
-					duration = mDuration * 1.1.toLong()
-					doOnEnd {
-						scrollTo(textViews[0].paint.measureText(textViews[0].text.toString()).toInt() - mWidth, 0)
-//						isStart = false
 					}
-				}.start()
-			}, getOddDuration(3))
-			
-			
-			Handler().postDelayed({
-				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width).apply {
-					duration = mDuration
-				}.start()
-			}, getOddDuration(4))
-
-
-//			Handler().postDelayed({
-//				ObjectAnimator.ofInt(this, "scrollX", textViews[0].width - mWidth - emptyGap).apply {
-//					duration = mDuration
-//				}.start()
-//				isStart = true
-//			}, getOddDuration(0))
-			
+					textViews.lastIndex -> {
+						val lastMove: Int = if (originalWidths[i] > mWidth)
+							mDistance + originalWidths[i] - mWidth
+						else
+							mDistance //- mWidth - emptyGap
+						
+						val startTermination: Int = if (originalWidths[i] > mWidth)
+							originalWidths[0] - mWidth
+						else
+							0 //- mWidth - emptyGap
+						
+						
+						animOnEndReset(lastMove, i + 1) {
+							scrollTo(startTermination, 0)
+							isStart = false
+						}
+					}
+					else -> {
+						if (originalWidths[i] > mWidth) {
+							//Too long
+							animPostDelay(mDistance + originalWidths[i] - mWidth, i + 1) { isFirst = true }
+						} else {
+							//Normal
+							animPostDelay(mDistance, i + 1) { isStart = true;isFirst = true }
+						}
+					}
+				}
+				
+			}
 		}
-		
-		
 	}
 	
-	fun getOddDuration(times: Int) = mDuration * (2 * times - 1)
+	private fun getTextMeasureWidth(textView: TextView) = textView.paint.measureText(textView.text.toString()).toInt()
 	
-	//region #test code
-	//Solution1  but too fast
-//		Handler().postDelayed({
-//			smoothScrollBy(430, 0)
-//		}, 1500)
-//
-//		Handler().postDelayed({
-//			smoothScrollBy(1250, 0)
-//		}, 3000)
+	private fun getOddDuration(times: Int) = mDuration * (2 * times - 1)
 	
-	
-	//Solution2  but always from start
-//		Handler().postDelayed({
-//			ObjectAnimator.ofInt(this, "scrollX", 220 + 250).apply {
-//				duration = 1400
-//			}.start()
-//		}, 1500)
-//
-//		Handler().postDelayed({
-//			ObjectAnimator.ofInt(this, "scrollX", 1680).apply {
-//				duration = 1500
-//			}.start()
-//		}, 3000)
-
-
-//		Handler().postDelayed({
-//			smoothScrollBy(200, 0)
-//		}, 4500)
-	//endregion
-	
-	/**
-	 *
-	Handler().postDelayed({
-	ObjectAnimator.ofInt(this, "scrollX", textViews[0].width - mWidth - emptyGap).apply {
-	duration = mDuration
-	}.start()
-	isStart = true
-	}, getOddDuration(0))
-	
-	Handler().postDelayed({
-	ObjectAnimator.ofInt(this, "scrollX", textViews[0].width).apply {
-	duration = mDuration
-	}.start()
-	isStart = true
-	}, getOddDuration(1))
-	//
-	Handler().postDelayed({
-	ObjectAnimator.ofInt(this, "scrollX", textViews[0].width + textViews[1].width).apply {
-	duration = mDuration
-	}.start()
-	}, getOddDuration(2))
-	//
-	Handler().postDelayed({
-	ObjectAnimator.ofInt(this, "scrollX", textViews[0].width + textViews[1].width + textViews[2].width).apply {
-	duration = mDuration * 1.1.toLong()
-	doOnEnd {
-	scrollTo(0, 0)
-	//						isStart = false
+	private fun animPostDelay(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
+		Handler().postDelayed({
+			ObjectAnimator.ofInt(this, "scrollX", distance).apply {
+				duration = mDuration
+			}.start()
+			fn?.invoke()
+		}, getOddDuration(durationTimes))
 	}
-	}.start()
-	}, getOddDuration(3))
-	 
-	 */
 	
+	private fun animNoDelay(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
+		Handler().postDelayed({
+			ObjectAnimator.ofInt(this, "scrollX", distance).apply {
+				duration = mDuration
+			}.start()
+			fn?.invoke()
+		}, 0)
+		Log.e("xxxxx======>","foesfs")
+	}
+	
+	private fun animOnEndReset(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
+		Handler().postDelayed({
+			ObjectAnimator.ofInt(this, "scrollX", distance).apply {
+				duration = mDuration * 1.1.toLong()
+				doOnEnd {
+					fn?.invoke()
+				}
+			}.start()
+		}, getOddDuration(durationTimes))
+	}
 	
 }

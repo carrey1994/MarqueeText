@@ -14,10 +14,8 @@ class MainActivity : AppCompatActivity() {
 		setContentView(R.layout.activity_main)
 		marqueeFrame.setData(
 			listOf(
-				"abcdefghijklmnopqrstuvwxyz !!!",
-				"あいうえおさしすせそかきくけこたちつてとなにぬねのなにぬ",//
-				"安安安安安安安安安安安@@",
-				"あいうえおさしすせそかきくけこたちつてとなにぬねのなにぬ"
+				"abcde",
+				"ZZZZZ"
 			))
 //		startActivity(Intent(this, AnotherActivity::class.java))
 //		marqueeFrame.invalidate()

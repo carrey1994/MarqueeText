@@ -3,7 +3,6 @@ package com.example.custommarquee
 import android.content.Context
 import android.os.Handler
 import android.util.AttributeSet
-import android.util.Log
 import android.widget.*
 import android.animation.ObjectAnimator
 import android.graphics.Canvas
@@ -18,14 +17,16 @@ class MarqueeFrame : HorizontalScrollView {
 	private var mWidth = 0
 	private val emptyGap = 600
 	private var isDataDone = false
-	private var isFirst = false
-	private var mDuration = 2500L
+	private var isFirst = true
+	private var mDuration = 3000L
 	private val marqueeLayout = LinearLayout(context)
 	private var isStart = false
 	private var isViewParamFinish = false
 	private lateinit var textViews: List<TextView>
 	private var originalWidths = listOf<Int>()
 	private val distanceList = arrayListOf<Int>()
+	
+	private var doneFirstFn: (() -> Unit)? = null
 	
 	init {
 		isVerticalScrollBarEnabled = false
@@ -73,58 +74,59 @@ class MarqueeFrame : HorizontalScrollView {
 			isStart = true
 			for (i in textViews.indices) {
 				var mDistance = 0
-				for (k in 0 until i) {
+				for (k in 0..i) {
 					mDistance += distanceList[k]
 				}
 				
 				when (i) {
-					0 -> {
-						if (originalWidths[0] > mWidth)
-							animNoDelay(originalWidths[0] - mWidth, 0) {
-								isStart = true
-								isFirst = true
-							}
-//						else
-//							animNoDelay(mWidth, 0) {
-//								isStart = true
-//								isFirst = true
-//							}
-					}
 					textViews.lastIndex -> {
-						val lastMove: Int = if (originalWidths[i] > mWidth)
-							mDistance + originalWidths[i] - mWidth
+						val lastMove: Int = if (originalWidths[0] > mWidth)
+							mDistance + originalWidths[0] - mWidth
 						else
 							mDistance //- mWidth - emptyGap
 						
-						val startTermination: Int = if (originalWidths[i] > mWidth)
+						val startTermination: Int = if (originalWidths[0] > mWidth)
 							originalWidths[0] - mWidth
 						else
 							0 //- mWidth - emptyGap
 						
-						
-						animOnEndReset(lastMove, i + 1) {
+						animOnEndReset(lastMove, i) {
 							scrollTo(startTermination, 0)
 							isStart = false
+							isFirst = false
 						}
 					}
 					else -> {
-						if (originalWidths[i] > mWidth) {
-							//Too long
-							animPostDelay(mDistance + originalWidths[i] - mWidth, i + 1) { isFirst = true }
+						if (i == 0) {
+							if (isFirst) {
+								doneFirstFn = if (originalWidths[i + 1] > mWidth) {
+									//Too long
+									animPostDelay(mDistance + originalWidths[i + 1] - mWidth, i)
+									({ animNoDelay(mDistance + originalWidths[i + 1] - mWidth) })
+								} else {
+									//Normal
+									animPostDelay(mDistance, i)
+									({ animNoDelay(mDistance) })
+								}
+							}
 						} else {
-							//Normal
-							animPostDelay(mDistance, i + 1) { isStart = true;isFirst = true }
+							if (originalWidths[i + 1] > mWidth) {
+								//Too long
+								animPostDelay(mDistance + originalWidths[i + 1] - mWidth, i)
+							} else {
+								//Normal
+								animPostDelay(mDistance, i)
+							}
 						}
 					}
 				}
-				
 			}
 		}
 	}
 	
 	private fun getTextMeasureWidth(textView: TextView) = textView.paint.measureText(textView.text.toString()).toInt()
 	
-	private fun getOddDuration(times: Int) = mDuration * (2 * times - 1)
+	private fun getOddDuration(times: Int) = mDuration * (2 * times + 1)
 	
 	private fun animPostDelay(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
 		Handler().postDelayed({
@@ -135,14 +137,13 @@ class MarqueeFrame : HorizontalScrollView {
 		}, getOddDuration(durationTimes))
 	}
 	
-	private fun animNoDelay(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
+	private fun animNoDelay(distance: Int, fn: (() -> Unit)? = null) {
 		Handler().postDelayed({
 			ObjectAnimator.ofInt(this, "scrollX", distance).apply {
 				duration = mDuration
 			}.start()
 			fn?.invoke()
 		}, 0)
-		Log.e("xxxxx======>","foesfs")
 	}
 	
 	private fun animOnEndReset(distance: Int, durationTimes: Int, fn: (() -> Unit)? = null) {
@@ -151,6 +152,7 @@ class MarqueeFrame : HorizontalScrollView {
 				duration = mDuration * 1.1.toLong()
 				doOnEnd {
 					fn?.invoke()
+					doneFirstFn?.invoke()
 				}
 			}.start()
 		}, getOddDuration(durationTimes))
